@@ -7,6 +7,23 @@ import plotly.graph_objects as go
 import base64
 import os
 
+import subprocess
+import sys
+import time
+
+# --- HACKATHON DEPLOYMENT TRICK ---
+# Automatically boot the MCP Server in the background so Streamlit Cloud doesn't need a terminal
+@st.cache_resource
+def start_background_mcp():
+    print("Booting FastMCP Server in the background...")
+    # This runs the MCP server file silently
+    process = subprocess.Popen([sys.executable, "src/mcp_server.py"])
+    time.sleep(2) # Give it 2 seconds to warm up
+    return process
+
+# Trigger the background server
+start_background_mcp()
+
 #--- Page Configuration
 st.set_page_config(page_title="AetherIQ Command Center", layout="wide", initial_sidebar_state="expanded")
 
