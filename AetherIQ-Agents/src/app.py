@@ -10,19 +10,24 @@ import os
 import subprocess
 import sys
 import time
+import os
 
-# --- HACKATHON DEPLOYMENT TRICK ---
-# Automatically boot the MCP Server in the background so Streamlit Cloud doesn't need a terminal
+# --- PATH-AGNOSTIC BACKGROUND MCP RUNNER ---
 @st.cache_resource
 def start_background_mcp():
     print("Booting FastMCP Server in the background...")
-    # This runs the MCP server file silently
-    process = subprocess.Popen([sys.executable, "src/mcp_server.py"])
-    time.sleep(2) # Give it 2 seconds to warm up
+    # Dynamically find the directory where app.py lives
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # Link to mcp_server.py inside the same directory
+    mcp_path = os.path.join(current_dir, "mcp_server.py")
+    
+    process = subprocess.Popen([sys.executable, mcp_path])
+    time.sleep(2) 
     return process
 
 # Trigger the background server
 start_background_mcp()
+# --------------------------------------------
 
 #--- Page Configuration
 st.set_page_config(page_title="AetherIQ Command Center", layout="wide", initial_sidebar_state="expanded")
