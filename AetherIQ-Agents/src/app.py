@@ -226,33 +226,62 @@ with col3:
 st.markdown("<br>", unsafe_allow_html=True)
 st.markdown("<h3 style='color:#ffffff; font-weight:800;'>🧠 MULTI-AGENT DIAGNOSTIC ENGINE</h3>", unsafe_allow_html=True)
 
+# UI HitL State Management
+if "hitl_auth_required" not in st.session_state:
+    st.session_state.hitl_auth_required = False
+if "agent_response" not in st.session_state:
+    st.session_state.agent_response = ""
+
 if st.button("RUN GENERATIVE DIAGNOSTICS LOG", use_container_width=True):
     if not api_key:
-        st.error("Access Prohibited: Local machine terminal lacks authorized Gemini credentials. Please insert your API key at the top.")
+        st.error("Access Prohibited: Local machine terminal lacks authorized Gemini credentials.")
     else:
-        with st.spinner("Routing query to ADK Orchestrator & Analyst Agents..."):
-            
-            # Package live telemetry for the multi-agent system
+        with st.spinner("Routing query through ADK Orchestrator..."):
             current_telemetry = {
                 "zone_name": zone_name,
                 "traffic_density": traffic_density,
                 "ambient_temp": ambient_temp,
                 "grid_load_mwh": energy_consumption,
                 "green_canopy": green_canopy,
-                "aqi": aqi,
-                "predicted_carbon_tons": round(predicted_carbon, 2)
+                "aqi": aqi
             }
             
-            # Formulate the instruction for the Orchestrator
-            user_query = f"Assess this live telemetry for {zone_name}. Provide a 3-step tactical risk management action plan for city engineers."
-            
+            # If the ML model detects critical risk, we auto-append a dangerous action to trigger the HITL demonstration
+            if grid_risk_class == 1:
+                user_query = f"Assess {zone_name}. Grid is CRITICAL. Initiate immediate automated load shedding and physically shut down Sector power."
+            else:
+                user_query = f"Assess {zone_name}. Provide a standard tactical risk management action plan."
+                
             try:
-                # Call the custom Agent Workflow we built!
-                agent_response = run_aetheriq_query(user_query, current_telemetry, api_key)
+                result = run_aetheriq_query(user_query, current_telemetry, api_key)
                 
-                st.markdown("<div class='telemetry-card'>", unsafe_allow_html=True)
-                st.markdown(f"**TACTICAL ACTION PLAN: {zone_name.upper()}**\n\n{agent_response}")
-                st.markdown("</div>", unsafe_allow_html=True)
-                
+                if result["status"] == "SECURITY_HALT":
+                    st.session_state.hitl_auth_required = True
+                    st.rerun() # Refresh to display the Security Guardrail UI
+                else:
+                    st.session_state.hitl_auth_required = False
+                    st.markdown("<div class='telemetry-card'>", unsafe_allow_html=True)
+                    st.markdown(f"**TACTICAL ACTION PLAN: {zone_name.upper()}**\n\n{result['message']}")
+                    st.markdown("</div>", unsafe_allow_html=True)
+                    
             except Exception as e:
-                st.error(f"Multi-Agent Execution Failed: Ensure your API key is valid. Error details: {str(e)}")
+                st.error(f"Multi-Agent Execution Failed: Ensure your API key is valid. Details: {str(e)}")
+
+# Display HITL Guardrail UI if triggered
+if st.session_state.hitl_auth_required:
+    st.markdown("""
+    <div style='background: rgba(255, 51, 51, 0.15); border: 2px solid #ff3333; padding: 20px; border-radius: 8px; margin-top: 20px; margin-bottom: 20px;'>
+    <h3 style='color: #ff3333; margin-top: 0;'>🚨 SECURITY GUARDRAIL TRIGGERED 🚨</h3>
+    <p style='color: #ffffff;'>The Security Agent detected an automated physical grid modification request. Enterprise protocols require a Human-in-the-Loop (HITL) authorization before executing.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    colA, colB = st.columns(2)
+    with colA:
+        if st.button("🔓 AUTHORIZE MANUAL OVERRIDE (HITL)", use_container_width=True):
+            st.session_state.hitl_auth_required = False
+            st.success("Override confirmed. Analyst Agent successfully executed the load shedding protocols.")
+    with colB:
+        if st.button("🔒 ABORT ACTION", use_container_width=True):
+            st.session_state.hitl_auth_required = False
+            st.info("Action aborted. Grid remains in critical status.")
