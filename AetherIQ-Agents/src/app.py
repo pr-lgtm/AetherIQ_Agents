@@ -41,10 +41,13 @@ def get_base64_of_bin_file(bin_file):
         return base64.b64encode(data).decode()
     return ""
 
-bg_path = "background.png" if os.path.exists("background.png") else "../background.png"
-bg_base64 = get_base64_of_bin_file(bg_path)
+# Dynamically locate the absolute parent directory
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+bg_path = os.path.join(BASE_DIR, "background.png")
+bg_base64 = get_base64_of_bin_file(bg_path)
 #--- Dynamic CSS Injection for Background, Fonts, & Cards ---
+
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css?family=Inter:wght@400;600;800&display=swap');
@@ -124,9 +127,9 @@ api_key = st.text_input("🔑 Authenticate Google Gemini API Key (Required for A
 #--- Model Loading Infrastructure
 @st.cache_resource
 def load_models():
-    regressor = joblib.load('models/rf_regressor.pkl')
-    classifier = joblib.load('models/rf_classifier.pkl')
-    features = joblib.load('models/model_features.pkl')
+    regressor = joblib.load(os.path.join(BASE_DIR, 'models', 'rf_regressor.pkl'))
+    classifier = joblib.load(os.path.join(BASE_DIR, 'models', 'rf_classifier.pkl'))
+    features = joblib.load(os.path.join(BASE_DIR, 'models', 'model_features.pkl'))
     return regressor, classifier, features
 
 try:
